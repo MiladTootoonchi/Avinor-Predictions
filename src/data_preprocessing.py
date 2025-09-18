@@ -1,6 +1,9 @@
 import pandas as pd
 from datetime import date
 
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+
 
 def compute_concurrency(times: pd.Series) -> int:
     """
@@ -123,3 +126,47 @@ def preprocessing(df: pd.DataFrame) -> pd.DataFrame:
     df_grouped = df_grouped[cols]
 
     return df_grouped
+
+
+def split_data(df: pd.DataFrame) -> tuple:
+    """
+    Split the dataset into training and testing sets using time series split.
+    
+    Args:
+        df (DataFrame): The preprocessed flight data.
+
+    Returns:
+        tuple: A tuple containing the training and testing DataFrames.
+    """
+
+    train = df[df["date"] < "2024-07-01"]
+    test = df[df["date"] >= "2024-07-01"]
+
+    X_train, y_train = train.drop(columns = ["concurrency", "date"]), train["concurrency"]
+    X_test, y_test = test.drop(columns = ["concurrency", "date"]), test["concurrency"]
+
+    return (X_train, y_train), (X_test, y_test)
+
+def pipeline_preprocessor() -> ColumnTransformer:
+    """
+    Create a preprocessing pipeline for the flight data.
+    
+    Returns:
+        ColumnTransformer: A column transformer that applies scaling to numerical features
+                          and one-hot encoding to categorical features.
+    """
+    
+    numeric_features = ["sched_flights", "sched_concurrence", "actual_concurrence"]
+    categorical_features = ["airport_group", "season", "hour"]
+
+    numeric_transformer = StandardScaler()
+    categorical_transformer = OneHotEncoder(handle_unknown = "ignore")
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features)
+        ]
+    )
+
+    return preprocessor
